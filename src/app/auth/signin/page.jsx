@@ -10,14 +10,16 @@ export default function Signup() {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const userData = Object.fromEntries(formData.entries());
-      
-        const { data, error } = await authClient.signUp.email(userData)
+       
+        const { data, error } = await authClient.signIn.email({...userData , callbackURL: "http://localhost:3000/dashboard", 
+        rememberMe: true}
+        )
 
         console.log("Signup response:", { data, error });
         if (error) {
         
          
-            toast.danger("There is some error", {
+            toast.danger("You Put Some Wrong Credintials", {
               actionProps: {children: "Error",  variant: "danger",},
               description:
                error.message,
@@ -29,7 +31,7 @@ export default function Signup() {
         } 
         if(data) {
             
-                    toast.success("You are signed up", {
+                    toast.success("You are sign in", {
                         actionProps: {
                             Key: "billing",
                             children: "Signed Up",
@@ -50,15 +52,12 @@ export default function Signup() {
     return (
         <>
             <div className=" mx-auto container my-20 ">
-                <h1 className="text-2xl font-bold text-center my-4">Please Sign Up </h1>
+                <h1 className="text-2xl font-bold text-center my-4">Please Sign In </h1>
 
 
 
                 <Form className="flex w-96 flex-col gap-4 mx-auto" onSubmit={onSubmit}>
-                    <TextField isRequired className="w-full" name="name" type="text">
-                        <Label>Name</Label>
-                        <Input placeholder="Enter your name" />
-                    </TextField>
+                    
                     <TextField
                         isRequired
                         name="email"
