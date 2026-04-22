@@ -1,27 +1,105 @@
-
 @import "tailwindcss";
-@import "@heroui/styles"; 
+@import "@heroui/styles";
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fffaf4;
+  --surface: rgba(255, 255, 255, 0.76);
+  --foreground: #1b241d;
+  --muted: #5f695f;
+  --border: rgba(27, 36, 29, 0.08);
+  --brand: #f26d4c;
+  --brand-soft: #ffd7ca;
+  --accent: #54b56f;
+  --accent-strong: #1f5c3f;
+  --shadow: 0 24px 70px rgba(26, 44, 33, 0.12);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Segoe UI Variable", "Aptos", "Trebuchet MS", sans-serif;
+  --font-mono: "Consolas", "SFMono-Regular", "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(242, 109, 76, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(84, 181, 111, 0.12), transparent 24%),
+    linear-gradient(180deg, #fffaf4 0%, #ffffff 55%, #f3f7f2 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI Variable", "Aptos", "Trebuchet MS", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(242, 109, 76, 0.22);
+  color: var(--foreground);
+}
+
+.glass-panel {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+.brand-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand), #f78f59);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 18px 40px rgba(242, 109, 76, 0.28);
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.brand-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 24px 42px rgba(242, 109, 76, 0.34);
+}
+
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(27, 36, 29, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--foreground);
+  font-weight: 600;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.ghost-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 92, 63, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.eyebrow {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.display-title {
+  font-family: "Aptos Display", "Segoe UI Variable Display", "Franklin Gothic Medium", sans-serif;
+  letter-spacing: -0.06em;
 }

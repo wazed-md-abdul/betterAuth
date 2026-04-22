@@ -1,738 +1,196 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 
-// ─── Fake Data ────────────────────────────────────────────────────────────────
-
-const REVENUE_DATA = [
-  { month: "Jul", value: 38400 },
-  { month: "Aug", value: 52100 },
-  { month: "Sep", value: 47800 },
-  { month: "Oct", value: 61200 },
-  { month: "Nov", value: 55900 },
-  { month: "Dec", value: 74300 },
-  { month: "Jan", value: 68500 },
-  { month: "Feb", value: 82100 },
-  { month: "Mar", value: 79400 },
-  { month: "Apr", value: 91700 },
-  { month: "May", value: 88200 },
-  { month: "Jun", value: 103400 },
+const summaryCards = [
+  { label: "Weekly sign-ins", value: "12,480", detail: "+14% from last week", tone: "warm" },
+  { label: "New accounts", value: "1,248", detail: "+8% after the redesign", tone: "green" },
+  { label: "Completion rate", value: "93%", detail: "Fewer people drop during onboarding", tone: "blue" },
 ];
 
-const TRAFFIC_DATA = [
-  { day: "Mon", sessions: 2840, bounce: 38 },
-  { day: "Tue", sessions: 3120, bounce: 42 },
-  { day: "Wed", sessions: 2950, bounce: 35 },
-  { day: "Thu", sessions: 3680, bounce: 29 },
-  { day: "Fri", sessions: 4120, bounce: 33 },
-  { day: "Sat", sessions: 2400, bounce: 51 },
-  { day: "Sun", sessions: 1980, bounce: 58 },
+const activityFeed = [
+  { title: "New team invite accepted", detail: "Design Ops joined the workspace 3 minutes ago." },
+  { title: "Security check completed", detail: "Password policy and session settings are up to date." },
+  { title: "Welcome email sent", detail: "Three new users received their onboarding sequence." },
 ];
 
-const RECENT_TRANSACTIONS = [
-  { id: "TXN-8821", user: "Mariko Tanaka", amount: 4200, status: "paid", product: "Enterprise Plan", avatar: "MT" },
-  { id: "TXN-8820", user: "Lorenzo Esposito", amount: 890, status: "paid", product: "Pro Plan", avatar: "LE" },
-  { id: "TXN-8819", user: "Aisha Okonkwo", amount: 12500, status: "pending", product: "Custom Build", avatar: "AO" },
-  { id: "TXN-8818", user: "Chen Wei", amount: 240, status: "paid", product: "Starter Plan", avatar: "CW" },
-  { id: "TXN-8817", user: "Priya Nair", amount: 4200, status: "failed", product: "Enterprise Plan", avatar: "PN" },
-  { id: "TXN-8816", user: "James Okafor", amount: 890, status: "paid", product: "Pro Plan", avatar: "JO" },
+const checklist = [
+  { title: "Invite your first teammate", status: "Recommended next step" },
+  { title: "Review password policy", status: "Looks good" },
+  { title: "Open analytics report", status: "Ready to explore" },
 ];
 
-const TOP_PAGES = [
-  { path: "/dashboard", views: 14820, change: 12 },
-  { path: "/products", views: 9340, change: -4 },
-  { path: "/pricing", views: 7210, change: 28 },
-  { path: "/blog/ai-trends", views: 5890, change: 64 },
-  { path: "/docs/api", views: 4120, change: 9 },
+const traffic = [
+  { label: "Organic", value: 72 },
+  { label: "Direct", value: 54 },
+  { label: "Referral", value: 38 },
+  { label: "Social", value: 29 },
 ];
 
-const NAV_ITEMS = [
-  { icon: "◈", label: "Overview", id: "overview" },
-  { icon: "◫", label: "Analytics", id: "analytics" },
-  { icon: "◎", label: "Revenue", id: "revenue" },
-  { icon: "◷", label: "Customers", id: "customers" },
-  { icon: "◉", label: "Products", id: "products" },
-  { icon: "◌", label: "Settings", id: "settings" },
-];
-
-// ─── Sparkline Chart ──────────────────────────────────────────────────────────
-
-function Sparkline({ data, color = "#e8ff5a", height = 48 }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const w = 120;
-  const h = height;
-  const pad = 2;
-
-  const points = data
-    .map((v, i) => {
-      const x = pad + (i / (data.length - 1)) * (w - pad * 2);
-      const y = h - pad - ((v - min) / range) * (h - pad * 2);
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  const area = `M${pad},${h} ` + data
-    .map((v, i) => {
-      const x = pad + (i / (data.length - 1)) * (w - pad * 2);
-      const y = h - pad - ((v - min) / range) * (h - pad * 2);
-      return `L${x},${y}`;
-    })
-    .join(" ") + ` L${w - pad},${h} Z`;
-
-  return (
-    <svg width={w} height={h} style={{ overflow: "visible" }}>
-      <defs>
-        <linearGradient id={`grad-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#grad-${color.replace("#", "")})`} />
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+function toneClasses(tone) {
+  if (tone === "green") {
+    return "from-[#1f5c3f] to-[#54b56f]";
+  }
+  if (tone === "blue") {
+    return "from-[#315f7d] to-[#67b7d8]";
+  }
+  return "from-[#b34f37] to-[#f26d4c]";
 }
 
-// ─── Revenue Bar Chart ────────────────────────────────────────────────────────
-
-function RevenueChart({ data }) {
-  const [hovered, setHovered] = useState(null);
-  const max = Math.max(...data.map((d) => d.value));
-
+export default function DashboardPage() {
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: "6px", height: "140px", paddingTop: "16px" }}>
-      {data.map((d, i) => {
-        const pct = (d.value / max) * 100;
-        const isHov = hovered === i;
-        return (
-          <div
-            key={d.month}
-            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", cursor: "pointer" }}
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered(null)}
-          >
-            {isHov && (
-              <div style={{
-                fontSize: "10px", fontFamily: "'DM Mono', monospace", color: "#e8ff5a",
-                background: "rgba(232,255,90,0.1)", border: "1px solid rgba(232,255,90,0.3)",
-                padding: "2px 5px", borderRadius: "4px", whiteSpace: "nowrap",
-                position: "absolute", transform: "translateY(-32px)",
-              }}>
-                ${(d.value / 1000).toFixed(1)}k
-              </div>
-            )}
-            <div
-              style={{
-                width: "100%", borderRadius: "4px 4px 0 0",
-                height: `${pct}%`,
-                background: isHov
-                  ? "linear-gradient(to top, #e8ff5a, #b8ff00)"
-                  : "linear-gradient(to top, rgba(232,255,90,0.5), rgba(232,255,90,0.2))",
-                transition: "all 0.2s ease",
-                position: "relative",
-              }}
-            />
-            <span style={{ fontSize: "10px", color: isHov ? "#e8ff5a" : "#555", fontFamily: "'DM Mono', monospace" }}>
-              {d.month}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Traffic Bar Chart ────────────────────────────────────────────────────────
-
-function TrafficChart({ data }) {
-  const maxSessions = Math.max(...data.map((d) => d.sessions));
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-      {data.map((d) => (
-        <div key={d.day} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ width: "28px", fontSize: "11px", color: "#555", fontFamily: "'DM Mono', monospace" }}>
-            {d.day}
-          </span>
-          <div style={{ flex: 1, height: "10px", background: "rgba(255,255,255,0.04)", borderRadius: "99px", overflow: "hidden" }}>
-            <div
-              style={{
-                width: `${(d.sessions / maxSessions) * 100}%`,
-                height: "100%",
-                background: "linear-gradient(to right, #e8ff5a80, #e8ff5a)",
-                borderRadius: "99px",
-                transition: "width 0.8s cubic-bezier(0.16,1,0.3,1)",
-              }}
-            />
-          </div>
-          <span style={{ width: "36px", textAlign: "right", fontSize: "11px", color: "#888", fontFamily: "'DM Mono', monospace" }}>
-            {(d.sessions / 1000).toFixed(1)}k
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Donut Chart ──────────────────────────────────────────────────────────────
-
-function DonutChart() {
-  const segments = [
-    { label: "Organic", pct: 38, color: "#e8ff5a" },
-    { label: "Paid", pct: 27, color: "#5affb0" },
-    { label: "Referral", pct: 20, color: "#5ab4ff" },
-    { label: "Direct", pct: 15, color: "#ff8c5a" },
-  ];
-
-  const r = 40;
-  const cx = 60;
-  const cy = 60;
-  const circumference = 2 * Math.PI * r;
-  let offset = 0;
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-      <svg width="120" height="120">
-        {segments.map((seg, i) => {
-          const dash = (seg.pct / 100) * circumference;
-          const gap = circumference - dash;
-          const el = (
-            <circle
-              key={i}
-              cx={cx} cy={cy} r={r}
-              fill="none"
-              stroke={seg.color}
-              strokeWidth="14"
-              strokeDasharray={`${dash} ${gap}`}
-              strokeDashoffset={-(offset / 100) * circumference + circumference / 4}
-              style={{ transition: "all 0.3s ease" }}
-            />
-          );
-          offset += seg.pct;
-          return el;
-        })}
-        <text x={cx} y={cy - 6} textAnchor="middle" fill="#fff" fontSize="14" fontWeight="700" fontFamily="'DM Mono', monospace">
-          100%
-        </text>
-        <text x={cx} y={cy + 10} textAnchor="middle" fill="#555" fontSize="9" fontFamily="'DM Mono', monospace">
-          Traffic
-        </text>
-      </svg>
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {segments.map((seg) => (
-          <div key={seg.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ width: "8px", height: "8px", borderRadius: "2px", background: seg.color, flexShrink: 0 }} />
-            <span style={{ fontSize: "11px", color: "#888", fontFamily: "'DM Mono', monospace" }}>{seg.label}</span>
-            <span style={{ fontSize: "11px", color: "#ccc", fontFamily: "'DM Mono', monospace", marginLeft: "auto" }}>{seg.pct}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, change, data, color }) {
-  const positive = change >= 0;
-  return (
-    <div style={{
-      background: "rgba(255,255,255,0.025)",
-      border: "1px solid rgba(255,255,255,0.07)",
-      borderRadius: "16px",
-      padding: "20px 22px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      backdropFilter: "blur(12px)",
-      position: "relative",
-      overflow: "hidden",
-      transition: "border-color 0.2s",
-    }}
-      onMouseEnter={(e) => e.currentTarget.style.borderColor = "rgba(232,255,90,0.2)"}
-      onMouseLeave={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <p style={{ margin: 0, fontSize: "11px", color: "#555", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'DM Mono', monospace" }}>
-            {label}
-          </p>
-          <p style={{ margin: "6px 0 0", fontSize: "26px", fontWeight: "800", color: "#fff", fontFamily: "'Syne', sans-serif", letterSpacing: "-0.02em" }}>
-            {value}
-          </p>
-        </div>
-        <div style={{ opacity: 0.8 }}>
-          <Sparkline data={data} color={color} />
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <span style={{
-          fontSize: "12px", fontFamily: "'DM Mono', monospace",
-          color: positive ? "#5affb0" : "#ff5a7a",
-          background: positive ? "rgba(90,255,176,0.1)" : "rgba(255,90,122,0.1)",
-          padding: "2px 8px", borderRadius: "99px",
-        }}>
-          {positive ? "+" : ""}{change}%
-        </span>
-        <span style={{ fontSize: "11px", color: "#444", fontFamily: "'DM Mono', monospace" }}>vs last month</span>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
-
-export default function Dashboard() {
-  const [activeNav, setActiveNav] = useState("overview");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [searchQuery, setSearchQuery] = useState("");
-  const [notifOpen, setNotifOpen] = useState(false);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (d) =>
-    d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-
-  const formatDate = (d) =>
-    d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-
-  const statCards = [
-    {
-      label: "Total Revenue",
-      value: "$103.4k",
-      change: 17.2,
-      color: "#e8ff5a",
-      data: REVENUE_DATA.map((d) => d.value),
-    },
-    {
-      label: "Active Users",
-      value: "24,812",
-      change: 8.4,
-      color: "#5affb0",
-      data: [180, 210, 195, 240, 228, 265, 248],
-    },
-    {
-      label: "Conversions",
-      value: "3.68%",
-      change: -1.2,
-      color: "#5ab4ff",
-      data: [3.9, 4.1, 3.8, 3.5, 3.7, 3.6, 3.7],
-    },
-    {
-      label: "Avg. Order",
-      value: "$284",
-      change: 5.9,
-      color: "#ff8c5a",
-      data: [240, 260, 255, 270, 265, 280, 284],
-    },
-  ];
-
-  return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-          background: #080808;
-          color: #e0e0e0;
-          font-family: 'DM Mono', monospace;
-          min-height: 100vh;
-        }
-
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 99px; }
-
-        input::placeholder { color: #333; }
-        input:focus { outline: none; }
-
-        .nav-item {
-          display: flex; align-items: center; gap: 12px;
-          padding: 10px 14px; border-radius: 10px;
-          cursor: pointer; transition: all 0.15s ease;
-          border: 1px solid transparent;
-          white-space: nowrap; overflow: hidden;
-          font-family: 'DM Mono', monospace;
-          font-size: 13px; color: #555;
-          text-decoration: none;
-        }
-        .nav-item:hover { background: rgba(255,255,255,0.04); color: #aaa; }
-        .nav-item.active {
-          background: rgba(232,255,90,0.08);
-          border-color: rgba(232,255,90,0.15);
-          color: #e8ff5a;
-        }
-
-        .card {
-          background: rgba(255,255,255,0.025);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 16px;
-          backdrop-filter: blur(12px);
-          transition: border-color 0.2s;
-        }
-        .card:hover { border-color: rgba(255,255,255,0.12); }
-
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .fade-up { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
-        }
-        .pulse { animation: pulse 2s ease infinite; }
-      `}</style>
-
-      <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#080808" }}>
-
-        {/* ── Sidebar ── */}
-        <aside style={{
-          width: sidebarCollapsed ? "64px" : "220px",
-          flexShrink: 0,
-          borderRight: "1px solid rgba(255,255,255,0.06)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "20px 12px",
-          gap: "4px",
-          transition: "width 0.3s cubic-bezier(0.16,1,0.3,1)",
-          overflow: "hidden",
-          background: "rgba(0,0,0,0.4)",
-          backdropFilter: "blur(20px)",
-        }}>
-          {/* Logo */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px",
-            padding: "8px 4px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: "8px"
-          }}>
-            <div style={{
-              width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0,
-              background: "linear-gradient(135deg, #e8ff5a, #5affb0)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "14px", fontWeight: "800", color: "#000",
-              fontFamily: "'Syne', sans-serif",
-            }}>N</div>
-            {!sidebarCollapsed && (
-              <span style={{ fontSize: "16px", fontWeight: "700", color: "#fff", fontFamily: "'Syne', sans-serif", letterSpacing: "-0.02em" }}>
-                Nexus
-              </span>
-            )}
+    <main className="min-h-screen px-6 py-8 lg:px-10">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        <header className="glass-panel flex flex-col gap-6 rounded-[2rem] p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="eyebrow">Dashboard</p>
+            <h1 className="display-title mt-3 text-4xl font-semibold text-[var(--foreground)] sm:text-5xl">
+              A cleaner control center for your auth flows.
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--muted)]">
+              This page now feels lighter, more readable, and easier to navigate, with quick summaries,
+              clear actions, and a calmer visual rhythm.
+            </p>
           </div>
 
-          {/* Nav */}
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeNav === item.id ? "active" : ""}`}
-              onClick={() => setActiveNav(item.id)}
-              style={{ background: "none", border: activeNav === item.id ? "1px solid rgba(232,255,90,0.15)" : "1px solid transparent" }}
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href="/auth/signup" className="brand-button justify-center px-6 py-4 text-base">
+              Add another account
+            </Link>
+            <Link href="/auth/signin" className="ghost-button justify-center px-6 py-4 text-base">
+              Switch user
+            </Link>
+          </div>
+        </header>
+
+        <section className="grid gap-4 lg:grid-cols-3">
+          {summaryCards.map((card) => (
+            <article
+              key={card.label}
+              className="glass-panel overflow-hidden rounded-[1.75rem] p-5"
             >
-              <span style={{ fontSize: "16px", flexShrink: 0 }}>{item.icon}</span>
-              {!sidebarCollapsed && item.label}
-            </button>
-          ))}
-
-          <div style={{ flex: 1 }} />
-
-          {/* User */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px",
-            padding: "10px 6px", borderTop: "1px solid rgba(255,255,255,0.06)",
-            paddingTop: "16px", marginTop: "4px", overflow: "hidden",
-          }}>
-            <div style={{
-              width: "30px", height: "30px", borderRadius: "8px", flexShrink: 0,
-              background: "linear-gradient(135deg, #5ab4ff, #5affb0)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "11px", fontWeight: "700", color: "#000", fontFamily: "'Syne', sans-serif",
-            }}>KM</div>
-            {!sidebarCollapsed && (
-              <div style={{ overflow: "hidden" }}>
-                <p style={{ fontSize: "12px", color: "#ccc", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Kenji Mori
-                </p>
-                <p style={{ fontSize: "10px", color: "#444" }}>Admin</p>
-              </div>
-            )}
-          </div>
-        </aside>
-
-        {/* ── Main ── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-          {/* ── Topbar ── */}
-          <header style={{
-            height: "60px", borderBottom: "1px solid rgba(255,255,255,0.06)",
-            display: "flex", alignItems: "center", gap: "16px",
-            padding: "0 24px", flexShrink: 0,
-            background: "rgba(0,0,0,0.3)", backdropFilter: "blur(20px)",
-          }}>
-            <button
-              onClick={() => setSidebarCollapsed((v) => !v)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#555", fontSize: "18px", padding: "4px" }}
-            >
-              ☰
-            </button>
-
-            {/* Search */}
-            <div style={{
-              flex: 1, maxWidth: "380px",
-              display: "flex", alignItems: "center", gap: "10px",
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: "10px", padding: "0 14px", height: "36px",
-            }}>
-              <span style={{ color: "#444", fontSize: "14px" }}>⌕</span>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search anything..."
-                style={{
-                  background: "none", border: "none", color: "#aaa",
-                  fontSize: "13px", fontFamily: "'DM Mono', monospace", width: "100%",
-                }}
-              />
-              <kbd style={{ fontSize: "10px", color: "#333", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: "4px" }}>⌘K</kbd>
-            </div>
-
-            <div style={{ flex: 1 }} />
-
-            {/* Clock */}
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "13px", color: "#ccc", fontFamily: "'DM Mono', monospace" }}>
-                {formatTime(currentTime)}
-              </div>
-              <div style={{ fontSize: "10px", color: "#444", fontFamily: "'DM Mono', monospace" }}>
-                {formatDate(currentTime)}
-              </div>
-            </div>
-
-            {/* Notif */}
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={() => setNotifOpen((v) => !v)}
-                style={{
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: "10px", width: "36px", height: "36px",
-                  cursor: "pointer", color: "#888", fontSize: "15px",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  position: "relative",
-                }}
-              >
-                🔔
-                <span className="pulse" style={{
-                  position: "absolute", top: "6px", right: "6px",
-                  width: "6px", height: "6px", borderRadius: "50%",
-                  background: "#e8ff5a",
-                }} />
-              </button>
-              {notifOpen && (
-                <div className="card" style={{
-                  position: "absolute", right: 0, top: "44px", width: "280px",
-                  padding: "16px", zIndex: 100,
-                }}>
-                  <p style={{ fontSize: "12px", color: "#e8ff5a", marginBottom: "12px", fontWeight: "600" }}>Notifications</p>
-                  {[
-                    { msg: "New enterprise signup: Acme Corp", time: "2m ago" },
-                    { msg: "Monthly report generated", time: "1h ago" },
-                    { msg: "Server usage above 80%", time: "3h ago" },
-                  ].map((n, i) => (
-                    <div key={i} style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                      <p style={{ fontSize: "12px", color: "#ccc" }}>{n.msg}</p>
-                      <p style={{ fontSize: "10px", color: "#444", marginTop: "2px" }}>{n.time}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </header>
-
-          {/* ── Content ── */}
-          <main style={{ flex: 1, overflow: "auto", padding: "28px 28px" }}>
-
-            {/* Page Header */}
-            <div className="fade-up" style={{ marginBottom: "28px", animationDelay: "0ms" }}>
-              <h1 style={{ fontSize: "24px", fontWeight: "800", fontFamily: "'Syne', sans-serif", color: "#fff", letterSpacing: "-0.03em" }}>
-                Overview
-              </h1>
-              <p style={{ fontSize: "12px", color: "#444", marginTop: "4px" }}>
-                Fiscal year · Jun 2024 – Jun 2025
+              <div className={`h-1.5 rounded-full bg-gradient-to-r ${toneClasses(card.tone)}`} />
+              <p className="mt-5 text-sm text-[var(--muted)]">{card.label}</p>
+              <p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-[var(--foreground)]">
+                {card.value}
               </p>
+              <p className="mt-3 text-sm text-[var(--accent-strong)]">{card.detail}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+          <article className="glass-panel rounded-[2rem] p-6 sm:p-8">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--accent-strong)]">Experience overview</p>
+                <h2 className="display-title mt-2 text-3xl font-semibold text-[var(--foreground)]">
+                  Your onboarding flow is trending in the right direction.
+                </h2>
+              </div>
+              <span className="rounded-full bg-[rgba(84,181,111,0.14)] px-4 py-2 text-sm font-medium text-[var(--accent-strong)]">
+                7-day snapshot
+              </span>
             </div>
 
-            {/* Stat Cards */}
-            <div className="fade-up" style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "16px", marginBottom: "24px",
-              animationDelay: "60ms",
-            }}>
-              {statCards.map((card) => (
-                <StatCard key={card.label} {...card} />
-              ))}
-            </div>
-
-            {/* Middle Row */}
-            <div className="fade-up" style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr",
-              gap: "16px", marginBottom: "24px",
-              animationDelay: "120ms",
-            }}>
-              {/* Revenue Chart */}
-              <div className="card" style={{ padding: "22px 24px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                  <h2 style={{ fontSize: "14px", fontWeight: "700", fontFamily: "'Syne', sans-serif", color: "#fff" }}>
-                    Revenue
-                  </h2>
-                  <div style={{ display: "flex", gap: "6px" }}>
-                    {["12M", "6M", "3M"].map((t, i) => (
-                      <button key={t} style={{
-                        background: i === 0 ? "rgba(232,255,90,0.1)" : "none",
-                        border: i === 0 ? "1px solid rgba(232,255,90,0.2)" : "1px solid transparent",
-                        color: i === 0 ? "#e8ff5a" : "#444",
-                        fontSize: "10px", padding: "3px 8px", borderRadius: "6px",
-                        cursor: "pointer", fontFamily: "'DM Mono', monospace",
-                      }}>
-                        {t}
-                      </button>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {[68, 82, 91].map((height, index) => (
+                <div key={height} className="rounded-[1.5rem] bg-white/70 p-4 shadow-[0_12px_30px_rgba(23,49,39,0.06)]">
+                  <div className="flex h-44 items-end gap-3">
+                    {[height - 24, height - 8, height].map((value) => (
+                      <div
+                        key={value}
+                        className="flex-1 rounded-t-[1rem] bg-[linear-gradient(180deg,rgba(31,92,63,0.18),rgba(242,109,76,0.8))]"
+                        style={{ height: `${value}%` }}
+                      />
                     ))}
                   </div>
+                  <p className="mt-4 text-sm font-medium text-[var(--foreground)]">Stage 0{index + 1}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    {index === 0 && "Discovery and first impression"}
+                    {index === 1 && "Account creation and verification"}
+                    {index === 2 && "Return visits and dashboard usage"}
+                  </p>
                 </div>
-                <p style={{ fontSize: "11px", color: "#444", marginBottom: "4px" }}>Total earnings this year</p>
-                <p style={{ fontSize: "28px", fontWeight: "800", fontFamily: "'Syne', sans-serif", color: "#fff", letterSpacing: "-0.03em" }}>
-                  $762,500
-                  <span style={{ fontSize: "13px", color: "#5affb0", fontFamily: "'DM Mono', monospace", fontWeight: "400", marginLeft: "10px" }}>+24.1%</span>
-                </p>
-                <RevenueChart data={REVENUE_DATA} />
-              </div>
-
-              {/* Traffic Sources */}
-              <div className="card" style={{ padding: "22px 24px" }}>
-                <h2 style={{ fontSize: "14px", fontWeight: "700", fontFamily: "'Syne', sans-serif", color: "#fff", marginBottom: "4px" }}>
-                  Traffic Sources
-                </h2>
-                <p style={{ fontSize: "11px", color: "#444", marginBottom: "18px" }}>By channel · this month</p>
-                <DonutChart />
-              </div>
+              ))}
             </div>
+          </article>
 
-            {/* Bottom Row */}
-            <div className="fade-up" style={{
-              display: "grid",
-              gridTemplateColumns: "1.5fr 1fr 1fr",
-              gap: "16px",
-              animationDelay: "180ms",
-            }}>
-              {/* Recent Transactions */}
-              <div className="card" style={{ padding: "22px 24px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <h2 style={{ fontSize: "14px", fontWeight: "700", fontFamily: "'Syne', sans-serif", color: "#fff" }}>
-                    Transactions
-                  </h2>
-                  <button style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    fontSize: "11px", color: "#e8ff5a", fontFamily: "'DM Mono', monospace",
-                  }}>View all →</button>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {RECENT_TRANSACTIONS.map((tx) => (
-                    <div key={tx.id} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <div style={{
-                        width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0,
-                        background: "rgba(255,255,255,0.06)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "10px", fontWeight: "700", color: "#ccc", fontFamily: "'Syne', sans-serif",
-                      }}>
-                        {tx.avatar}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: "12px", color: "#ccc", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {tx.user}
-                        </p>
-                        <p style={{ fontSize: "10px", color: "#444" }}>{tx.product}</p>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <p style={{ fontSize: "12px", color: "#fff", fontWeight: "600" }}>
-                          ${tx.amount.toLocaleString()}
-                        </p>
-                        <span style={{
-                          fontSize: "9px", padding: "1px 6px", borderRadius: "99px",
-                          background:
-                            tx.status === "paid" ? "rgba(90,255,176,0.1)" :
-                            tx.status === "pending" ? "rgba(232,255,90,0.1)" :
-                            "rgba(255,90,122,0.1)",
-                          color:
-                            tx.status === "paid" ? "#5affb0" :
-                            tx.status === "pending" ? "#e8ff5a" :
-                            "#ff5a7a",
-                          fontFamily: "'DM Mono', monospace",
-                        }}>
-                          {tx.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <article className="glass-panel rounded-[2rem] p-6 sm:p-8">
+            <p className="text-sm font-medium text-[var(--accent-strong)]">Traffic mix</p>
+            <h2 className="display-title mt-2 text-3xl font-semibold text-[var(--foreground)]">
+              Where people arrive from
+            </h2>
 
-              {/* Daily Traffic */}
-              <div className="card" style={{ padding: "22px 24px" }}>
-                <h2 style={{ fontSize: "14px", fontWeight: "700", fontFamily: "'Syne', sans-serif", color: "#fff", marginBottom: "4px" }}>
-                  Daily Traffic
-                </h2>
-                <p style={{ fontSize: "11px", color: "#444", marginBottom: "16px" }}>Sessions this week</p>
-                <TrafficChart data={TRAFFIC_DATA} />
-              </div>
-
-              {/* Top Pages */}
-              <div className="card" style={{ padding: "22px 24px" }}>
-                <h2 style={{ fontSize: "14px", fontWeight: "700", fontFamily: "'Syne', sans-serif", color: "#fff", marginBottom: "16px" }}>
-                  Top Pages
-                </h2>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  {TOP_PAGES.map((page, i) => (
-                    <div key={page.path} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontSize: "10px", color: "#333", fontFamily: "'DM Mono', monospace", width: "14px" }}>
-                        {i + 1}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: "11px", color: "#aaa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {page.path}
-                        </p>
-                        <p style={{ fontSize: "10px", color: "#444" }}>
-                          {page.views.toLocaleString()} views
-                        </p>
-                      </div>
-                      <span style={{
-                        fontSize: "10px", fontFamily: "'DM Mono', monospace",
-                        color: page.change >= 0 ? "#5affb0" : "#ff5a7a",
-                      }}>
-                        {page.change >= 0 ? "+" : ""}{page.change}%
-                      </span>
-                    </div>
-                  ))}
+            <div className="mt-8 space-y-5">
+              {traffic.map((item) => (
+                <div key={item.label}>
+                  <div className="mb-2 flex items-center justify-between text-sm text-[var(--muted)]">
+                    <span>{item.label}</span>
+                    <span className="font-medium text-[var(--foreground)]">{item.value}%</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-[rgba(27,36,29,0.08)]">
+                    <div
+                      className="h-3 rounded-full bg-[linear-gradient(90deg,#1f5c3f,#54b56f,#f4a26f)]"
+                      style={{ width: `${item.value}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
+          </article>
+        </section>
 
-          </main>
-        </div>
+        <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <article className="glass-panel rounded-[2rem] p-6 sm:p-8">
+            <p className="text-sm font-medium text-[var(--accent-strong)]">Next steps</p>
+            <h2 className="display-title mt-2 text-3xl font-semibold text-[var(--foreground)]">
+              Friendly guidance for new admins
+            </h2>
+
+            <div className="mt-8 space-y-4">
+              {checklist.map((item, index) => (
+                <div
+                  key={item.title}
+                  className="flex items-start gap-4 rounded-[1.5rem] border border-white/80 bg-white/70 px-5 py-4 shadow-[0_12px_30px_rgba(23,49,39,0.06)]"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(242,109,76,0.16)] text-sm font-semibold text-[var(--brand)]">
+                    0{index + 1}
+                  </div>
+                  <div>
+                    <p className="text-base font-medium text-[var(--foreground)]">{item.title}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{item.status}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="glass-panel rounded-[2rem] p-6 sm:p-8">
+            <p className="text-sm font-medium text-[var(--accent-strong)]">Recent activity</p>
+            <h2 className="display-title mt-2 text-3xl font-semibold text-[var(--foreground)]">
+              Useful updates without the noise
+            </h2>
+
+            <div className="mt-8 space-y-4">
+              {activityFeed.map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-[1.5rem] border border-white/80 bg-white/70 px-5 py-5 shadow-[0_12px_30px_rgba(23,49,39,0.06)]"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-base font-medium text-[var(--foreground)]">{item.title}</p>
+                    <span className="rounded-full bg-[rgba(31,92,63,0.12)] px-3 py-1 text-xs font-medium text-[var(--accent-strong)]">
+                      Updated
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
       </div>
-    </>
+    </main>
   );
 }
