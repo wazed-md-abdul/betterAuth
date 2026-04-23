@@ -1,6 +1,8 @@
 "use client";
 
+import { signOut, useSession } from "@/lib/auth-client";
 import Link from "next/link";
+import { CircleLoader, PacmanLoader } from "react-spinners";
 
 const summaryCards = [
   { label: "Weekly sign-ins", value: "12,480", detail: "+14% from last week", tone: "warm" },
@@ -38,12 +40,34 @@ function toneClasses(tone) {
 }
 
 export default function DashboardPage() {
+  const { data, isPending } = useSession();
+
+
   return (
+    isPending ? (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-lg text-[var(--muted)]"><CircleLoader /></p>
+      </div>
+    ) : (
+       <DashboardContent user={data?.user} />
+    )
+  );
+}
+
+function DashboardContent({ user }) {
+  console.log(user);
+  
+  return (
+
     <main className="min-h-screen px-6 py-8 lg:px-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="glass-panel flex flex-col gap-6 rounded-[2rem] p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+        <header className="glass-panel flex flex-col gap-6 rounded-[2rem] p-6 sm:p-8 lg:items-end lg:flex-row 
+         lg:justify-between">
           <div>
-            <p className="eyebrow">Dashboard</p>
+            <p className="eyebrow">Dashboard  </p>
+            <h2>Welcome back, {user?.name} 👋 </h2>
+            <h2>{user?.email}</h2>
+            <h2>{user === undefined ? "Not signed in" : "Signed in"}</h2>
             <h1 className="display-title mt-3 text-4xl font-semibold text-[var(--foreground)] sm:text-5xl">
               A cleaner control center for your auth flows.
             </h1>
@@ -54,11 +78,17 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href="/auth/signup" className="brand-button justify-center px-6 py-4 text-base">
-              Add another account
-            </Link>
-            <Link href="/auth/signin" className="ghost-button justify-center px-6 py-4 text-base">
-              Switch user
+
+            <div>
+              <Link href="/auth/signup" className="brand-button justify-center px-6 py-4 text-base">
+                Add another account
+              </Link>
+              <Link href="/auth/signin" className="ghost-button justify-center px-6 py-4 text-base">
+                Switch user
+              </Link>
+            </div>
+            <Link href="/" onClick={() => { signOut() }} className="ghost-button justify-center px-6 py-4 text-base">
+              Sign Out
             </Link>
           </div>
         </header>
