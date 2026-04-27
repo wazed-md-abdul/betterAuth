@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Toast } from "@heroui/react";
 
+
 export const metadata = {
   title: "BetterAuth",
   description: "A stylish, user-friendly authentication starter built with Next.js and Better Auth.",
